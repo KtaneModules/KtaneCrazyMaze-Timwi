@@ -8,9 +8,7 @@ using Rnd = UnityEngine.Random;
 
 public class PolygonalMazeScript : MonoBehaviour
 {
-
     static int _moduleIdCounter = 1;
-    static int _lowestModID = 99999999;
     int _moduleID = 0;
 
     public KMBombModule Module;
@@ -58,14 +56,17 @@ public class PolygonalMazeScript : MonoBehaviour
     void Awake()
     {
         _moduleID = _moduleIdCounter++;
-        if (_lowestModID > _moduleID)
-            _lowestModID = _moduleID;
         var contents = Module.transform.Find("Contents").transform;
         PlaceArrows();
+        for (int i = 0; i < Arrows.Length; i++)
+        {
+            int x = i;
+            Arrows[x].OnInteract += delegate { ArrowPress(x); return false; };
+        }
         for (int i = 0; i < Numbers.Length; i++)
             StartCoroutine(NumbersAnim(i, i / 2f));
-        contents.localScale = new Vector3();
-        Module.OnActivate += delegate { if (_moduleID == _lowestModID) Audio.PlaySoundAtTransform("show shape", Module.transform); StartCoroutine(ActivateAnim()); };
+        contents.localScale = Vector3.zero;
+        Module.OnActivate += delegate { contents.localScale = Vector3.one; };
     }
 
     // Use this for initialization
@@ -78,6 +79,11 @@ public class PolygonalMazeScript : MonoBehaviour
     void Update()
     {
 
+    }
+
+    void ArrowPress(int pos)
+    {
+        Audio.PlaySoundAtTransform("move", Arrows[pos].transform);
     }
 
     void PlaceArrows()
@@ -93,21 +99,6 @@ public class PolygonalMazeScript : MonoBehaviour
             else
                 Arrows[i].transform.localScale = new Vector3();
         }
-    }
-
-    private IEnumerator ActivateAnim(float duration = .75f)
-    {
-        var contents = Module.transform.Find("Contents").transform;
-        float timer = 0;
-        while (timer < duration)
-        {
-            yield return null;
-            timer += Time.deltaTime;
-            contents.localScale = new Vector3(1, 1, 1) * Easing.OutExpo(timer, 0, 1, duration);
-            contents.transform.localEulerAngles = new Vector3(0, 1, 0) * Easing.OutExpo(timer, 90, 0, duration);
-        }
-        contents.localScale = new Vector3(1, 1, 1);
-        contents.transform.localEulerAngles = new Vector3(0, 0, 0);
     }
 
     private IEnumerator NumbersAnim(int ix, float offset, float duration = 2f, float intensity = 0.0003f, float adjustX = 0.02f, float adjustZ = 0.02f, float scaleX = 2f, float scaleZ = 1f)
