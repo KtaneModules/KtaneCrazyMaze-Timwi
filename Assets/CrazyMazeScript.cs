@@ -1,11 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using CrazyMaze;
 using UnityEngine;
 
 using Rnd = UnityEngine.Random;
 
-public class PolygonalMazeScript : MonoBehaviour
+public class CrazyMazeScript : MonoBehaviour
 {
     public KMBombModule Module;
     public KMBombInfo Bomb;
@@ -57,25 +58,25 @@ public class PolygonalMazeScript : MonoBehaviour
 
             if (goingTo != null && _passable[_currentCell].Contains(goingTo.Value))
             {
-                Debug.LogFormat(@"[Polygonal Maze #{0}] {3} from {1} to {2}.", _moduleID, _cellLetters[_currentCell], _cellLetters[goingTo.Value], upper);
+                Debug.LogFormat(@"[Crazy Maze #{0}] {3} from {1} to {2}.", _moduleID, _cellLetters[_currentCell], _cellLetters[goingTo.Value], upper);
                 if (isBridge)
                     _showingGoal = !_showingGoal;
                 SetCell(goingTo.Value);
                 if (goingTo.Value == _goalCell)
                 {
-                    Debug.LogFormat(@"[Polygonal Maze #{0}] Module solved.", _moduleID);
+                    Debug.LogFormat(@"[Crazy Maze #{0}] Module solved.", _moduleID);
                     Module.HandlePass();
                     _moduleSolved = true;
                 }
             }
             else if (goingTo != null)
             {
-                Debug.LogFormat(@"[Polygonal Maze #{0}] Attempt to {3} from {1} to {2}. Strike.", _moduleID, _cellLetters[_currentCell], _cellLetters[goingTo.Value], lower);
+                Debug.LogFormat(@"[Crazy Maze #{0}] Attempt to {3} from {1} to {2}. Strike.", _moduleID, _cellLetters[_currentCell], _cellLetters[goingTo.Value], lower);
                 Module.HandleStrike();
             }
             else
             {
-                Debug.LogFormat(@"[Polygonal Maze #{0}] Attempt to cross a non-existent bridge from {1}. Strike.", _moduleID, _cellLetters[_currentCell]);
+                Debug.LogFormat(@"[Crazy Maze #{0}] Attempt to cross a non-existent bridge from {1}. Strike.", _moduleID, _cellLetters[_currentCell]);
                 Module.HandleStrike();
             }
 
@@ -143,8 +144,8 @@ public class PolygonalMazeScript : MonoBehaviour
         }
         _goalCell = chooseFrom.PickRandom();
 
-        Debug.LogFormat(@"[Polygonal Maze #{0}] Start cell: {1}", _moduleID, _cellLetters[_currentCell]);
-        Debug.LogFormat(@"[Polygonal Maze #{0}] Goal cell: {1}", _moduleID, _cellLetters[_goalCell]);
+        Debug.LogFormat(@"[Crazy Maze #{0}] Start cell: {1}", _moduleID, _cellLetters[_currentCell]);
+        Debug.LogFormat(@"[Crazy Maze #{0}] Goal cell: {1}", _moduleID, _cellLetters[_goalCell]);
 
         StartCoroutine(CellTextAnimation(CurCellText.transform, 0, adjustX: -.02f, adjustZ: .02f));
         StartCoroutine(CellTextAnimation(GoalCellText.transform, 1, adjustX: .02f, adjustZ: -.02f));

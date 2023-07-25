@@ -1,16 +1,18 @@
-struct CellTransitions
+namespace CrazyMaze
 {
-    public int? BridgeDestination { get; private set; }
-    public Transition[] Neighbors { get; private set; }
-
-    public CellTransitions(int? bridgeDestination, Transition[] neighbors)
+    struct CellTransitions
     {
-        BridgeDestination = bridgeDestination;
-        Neighbors = neighbors;
-    }
+        public int? BridgeDestination { get; private set; }
+        public Transition[] Neighbors { get; private set; }
 
-    public static CellTransitions[] All = new CellTransitions[]
-    {
+        public CellTransitions(int? bridgeDestination, Transition[] neighbors)
+        {
+            BridgeDestination = bridgeDestination;
+            Neighbors = neighbors;
+        }
+
+        public static CellTransitions[] All = new CellTransitions[]
+        {
         /*!*/
         new CellTransitions(40, new[] { new Transition(1, 0.0216506350905692f, 0.0374999999929994f, 150f), new Transition(5, -0.0216506350905692f, 0.0374999999929994f, -150f), new Transition(4, -0.0433012701811383f, -1.58603289202557E-17f, -90f) }),
         new CellTransitions(53, new[] { new Transition(0, -0.0216506350905692f, -0.0374999999929994f, -30f), new Transition(2, 0.0216506350905692f, 0.0374999999929994f, 150f), new Transition(6, -0.0216506350905692f, 0.0374999999929994f, -150f), new Transition(5, -0.0433012701811384f, 0f, -90.0000000000001f) }),
@@ -688,5 +690,6 @@ struct CellTransitions
         new CellTransitions(null, new[] { new Transition(662, 0f, -0.0339285714222374f, 30.0000000000001f), new Transition(666, 0.0293830047657724f, 0.0169642857111191f, 90f), new Transition(674, 0f, 0.0339285714222377f, -150f), new Transition(675, -0.0293830047657724f, -0.0169642857111186f, -90f) }),
         new CellTransitions(null, new[] { new Transition(673, 0.0293830047657724f, -0.0169642857111191f, 29.9999999999999f), new Transition(675, -0.0293830047657724f, -0.0169642857111191f, -29.9999999999999f) }),
         new CellTransitions(602, new[] { new Transition(671, 0f, -0.0339285714222374f, -30f), new Transition(673, 0.0293830047657724f, -0.0169642857111186f, 90f), new Transition(674, 0f, 0.0339285714222377f, 150f) })/*!!*/
-    };
+        };
+    }
 }
