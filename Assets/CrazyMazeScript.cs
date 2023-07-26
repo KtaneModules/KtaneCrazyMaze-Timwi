@@ -1,6 +1,8 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using CrazyMaze;
 using UnityEngine;
 
@@ -23,6 +25,7 @@ public class CrazyMazeScript : MonoBehaviour
     private int _moduleID = 0;
     private bool _moduleSolved = false;
 
+    private int _startingCell;
     private int _currentCell;
     private int _goalCell;
     private bool _showingGoal;
@@ -88,6 +91,7 @@ public class CrazyMazeScript : MonoBehaviour
     {
         // ## RULE SEED
         var rnd = RuleSeedable.GetRNG();
+        Debug.LogFormat(@"[Crazy Maze #{0}] Using rule seed: {1}.", _moduleID, rnd.Seed);
         var cells = Enumerable.Range(0, 676).ToList();
         var links = Enumerable.Range(0, 676)
             .Select(cellIx => CellTransitions.All[cellIx])
@@ -126,11 +130,13 @@ public class CrazyMazeScript : MonoBehaviour
         // End rule seed
 
         // Decide on a start cell
-        SetCell(Rnd.Range(0, 26 * 26));
+        _startingCell = Rnd.Range(0, 26 * 26);
+        //_startingCell = _cellLetters.IndexOf(c => c == "PM");
+        SetCell(_startingCell);
 
         // Decide on a goal cell that is a certain distance away
         const int minAllowedDistance = 12;
-        const int maxAllowedDistance = 17;
+        const int maxAllowedDistance = 20;
         var visited = new HashSet<int> { _currentCell };
         var chooseFrom = new HashSet<int>();
         var curDist = 0;
@@ -182,6 +188,118 @@ public class CrazyMazeScript : MonoBehaviour
             trf.localPosition = new Vector3(x + adjustX, trf.localPosition.y, z + adjustZ);
             CurCellText.text = _moduleSolved ? "G" : _showingGoal ? "??" : _cellLetters[_currentCell];
             GoalCellText.text = _moduleSolved ? "G" : _showingGoal ? _cellLetters[_goalCell] : "??";
+        }
+    }
+
+#pragma warning disable 414
+    private readonly string TwitchHelpMessage = @"!{0} cycle [shows all arrows] | !{0} move 231 [moves the second arrow in the cycle, then the third, etc.; arrows are numbered clockwise from 12 o’clock] | !{0} bridge | !{0} reset [return to starting location]";
+#pragma warning restore 414
+
+    private IEnumerator ProcessTwitchCommand(string command)
+    {
+        Match m;
+
+        if (Regex.IsMatch(command, @"^\s*cycle\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            yield return null;
+            for (int i = 0; i < Arrows.Length; i++)
+            {
+                var obj = Arrows[i].gameObject;
+                if (!obj.activeSelf)
+                    break;
+                yield return new WaitForSeconds(.25f);
+                var hClone = obj.transform.Find("Highlight(Clone)");
+                if (hClone != null)
+                    obj = hClone.gameObject ?? obj;
+                obj.SetActive(true);
+                yield return new WaitForSeconds(.7f);
+                obj.SetActive(false);
+                yield return new WaitForSeconds(.1f);
+            }
+        }
+        else if (Regex.IsMatch(command, @"^\s*reset\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            yield return null;
+            SetCell(_startingCell);
+            _showingGoal = false;
+        }
+        else if (Regex.IsMatch(command, @"^\s*bridge\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            yield return null;
+            yield return new[] { Bridge };
+        }
+        else if ((m = Regex.Match(command, @"^\s*move\s+([1-8 ,;]+)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)).Success)
+        {
+            var vals = m.Groups[1].Value.Where(ch => ch >= '1' && ch <= '8').ToArray();
+            if (vals.Length == 0)
+            {
+                yield return "sendtochaterror @{0}, those are not valid numbers.";
+                yield break;
+            }
+            yield return null;
+            for (var i = 0; i < vals.Length; i++)
+            {
+                var val = vals[i] - '1';
+                if (!Arrows[val].gameObject.activeSelf)
+                {
+                    yield return i == 0
+                        ? "sendtochaterror @{0}, that first number is not a valid arrow."
+                        : i == 1
+                            ? "sendtochaterror @{0}, I executed the first move but the second one is not a valid arrow."
+                            : string.Format("sendtochaterror @{{0}}, I executed the first {0} of your moves but the next one is not a valid arrow.", i);
+                    yield break;
+                }
+                yield return new[] { Arrows[val] };
+            }
+        }
+    }
+
+    public IEnumerator TwitchHandleForcedSolve()
+    {
+        if (_moduleSolved)
+            yield break;
+
+        var q = new Queue<int>();
+        q.Enqueue(_currentCell);
+        var parents = new Dictionary<int, int>();
+        parents[_currentCell] = -1;
+        while (q.Count > 0)
+        {
+            var cell = q.Dequeue();
+            if (cell == _goalCell)
+                break;
+
+            var neighbors = CellTransitions.All[cell].Neighbors;
+            for (var dir = 0; dir < neighbors.Length; dir++)
+            {
+                var newCell = neighbors[dir].ToCell;
+                if (!_passable[cell].Contains(newCell) || parents.ContainsKey(newCell))
+                    continue;
+                parents[newCell] = cell;
+                q.Enqueue(newCell);
+            }
+            if (CellTransitions.All[cell].BridgeDestination != null)
+            {
+                var newCell = CellTransitions.All[cell].BridgeDestination.Value;
+                if (!_passable[cell].Contains(newCell) || parents.ContainsKey(newCell))
+                    continue;
+                parents[newCell] = cell;
+                q.Enqueue(newCell);
+            }
+        }
+
+        var path = new List<int>();
+        var c = _goalCell;
+        while (c != _currentCell)
+        {
+            path.Add(c);
+            c = parents[c];
+        }
+        for (int i = path.Count - 1; i >= 0; i--)
+        {
+            var buttonToPress = CellTransitions.All[_currentCell].Neighbors.IndexOf(n => n.ToCell == path[i]);
+            (buttonToPress == -1 ? Bridge : Arrows[buttonToPress]).OnInteract();
+            yield return new WaitForSeconds(.1f);
         }
     }
 }

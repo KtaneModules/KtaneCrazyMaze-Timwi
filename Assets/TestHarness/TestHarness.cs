@@ -144,6 +144,40 @@ public class FakeBombInfo : MonoBehaviour
         return moduleList;
     }
 
+    public List<string> GetModuleIDs()
+    {
+        List<string> moduleList = new List<string>();
+        foreach (KeyValuePair<KMBombModule, bool> m in modules)
+        {
+            moduleList.Add(m.Key.ModuleType);
+        }
+        foreach (KMNeedyModule m in needyModules)
+        {
+            moduleList.Add(m.ModuleType);
+        }
+        return moduleList;
+    }
+
+    public List<string> GetSolvableModuleIDs()
+    {
+        List<string> moduleList = new List<string>();
+        foreach (KeyValuePair<KMBombModule, bool> m in modules)
+        {
+            moduleList.Add(m.Key.ModuleType);
+        }
+        return moduleList;
+    }
+
+    public List<string> GetSolvedModuleIDs()
+    {
+        List<string> moduleList = new List<string>();
+        foreach (KeyValuePair<KMBombModule, bool> m in modules)
+        {
+            if (m.Value) moduleList.Add(m.Key.ModuleType);
+        }
+        return moduleList;
+    }
+
     public List<string> GetWidgetQueryResponses(string queryKey, string queryInfo)
     {
         List<string> responses = new List<string>();
@@ -437,7 +471,7 @@ public class TestHarness : MonoBehaviour
     bool gamepadEnabled = false;
     TestSelectable lastSelected;
 
-    AudioSource audioSource;
+    private Transform AudioSourceTransforms;
     [Range(0.0f, 1.0f)] public float AudioVolume = 0.25f;
     public List<AudioClip> AudioClips;
     public Dictionary<KMSoundOverride.SoundEffect, AudioSource> GameSoundEffectSources = new Dictionary<KMSoundOverride.SoundEffect, AudioSource>();
@@ -512,8 +546,12 @@ public class TestHarness : MonoBehaviour
         NeedyModules = FindObjectsOfType<KMNeedyModule>().ToList();
         var allModules = Modules.ToArray().Concat<Component>(NeedyModules.ToArray());
         foreach (Component moduleComponent in allModules)
+        {
+            if(moduleComponent is KMBombModule)
+		        fakeInfo.modules.Add(new KeyValuePair<KMBombModule, bool>((KMBombModule)moduleComponent, false));
             Handlers(moduleComponent.GetComponent<KMBombInfo>());
-
+        }
+        fakeInfo.needyModules = NeedyModules.ToList();
         ReplaceBombInfo();
         AddHighlightables();
         AddSelectables();
@@ -530,44 +568,25 @@ public class TestHarness : MonoBehaviour
         Debug.LogErrorFormat("There is an unassigned {0} on the following object: {1}", unassigned, string.Join(" > ", str.ToArray()));
     }
 
-    Component LogReplaceBombInfoError(FieldInfo f, MonoBehaviour s)
-    {
-        Component component = (Component) f.GetValue(s);
-        if (component == null)
-        {
-            var obj = s.transform;
-            LogErrorAtTransform(obj, string.Format("component of type {0}", f.FieldType.Name));
-        }
-        return component;
-    }
-
     void ReplaceBombInfo()
     {
-        HashSet<Component> components = new HashSet<Component>();
-        MonoBehaviour[] scripts = FindObjectsOfType<MonoBehaviour>();
-        foreach (MonoBehaviour s in scripts)
+        var components = new HashSet<Component>();
+        foreach (var gameInfo in FindObjectsOfType<KMGameInfo>())
         {
-            IEnumerable<FieldInfo> fields = s.GetType().GetFields();
-            foreach (FieldInfo f in fields)
+            if (!components.Add(gameInfo))
+                continue;
+            var info = gameInfo;
+            fakeInfo.OnLights += on =>
             {
-                if (f.FieldType == typeof(KMGameInfo))
-                {
-                    KMGameInfo component = (KMGameInfo) LogReplaceBombInfoError(f, s);
-                    if (component == null || !components.Add(component)) continue;
-
-                    component.OnLightsChange += new KMGameInfo.KMLightsChangeDelegate(fakeInfo.OnLightsChange);
-                    //component.OnAlarmClockChange += new KMGameInfo.KMAlarmClockChangeDelegate(fakeInfo.OnAlarm);
-                    continue;
-                }
-                if (f.FieldType == typeof(KMGameCommands))
-                {
-                    KMGameCommands component = (KMGameCommands) LogReplaceBombInfoError(f, s);
-                    if (component == null || !components.Add(component)) continue;
-
-                    component.OnCauseStrike += new KMGameCommands.KMCauseStrikeDelegate(fakeInfo.HandleStrike);
-                    continue;
-                }
-            }
+                if(info.OnLightsChange != null)
+                    info.OnLightsChange(on);
+            };
+        }
+        foreach (var gameCommands in FindObjectsOfType<KMGameCommands>())
+        {
+            if (!components.Add(gameCommands))
+                continue;
+            gameCommands.OnCauseStrike += fakeInfo.HandleStrike;
         }
     }
 
@@ -989,6 +1008,9 @@ public class TestHarness : MonoBehaviour
         component.ModuleNamesHandler += new KMBombInfo.GetModuleNamesHandler(fakeInfo.GetModuleNames);
         component.SolvableModuleNamesHandler += new KMBombInfo.GetSolvableModuleNamesHandler(fakeInfo.GetSolvableModuleNames);
         component.SolvedModuleNamesHandler += new KMBombInfo.GetSolvedModuleNamesHandler(fakeInfo.GetSolvedModuleNames);
+        component.ModuleIDsHandler += new KMBombInfo.GetModuleIDsHandler(fakeInfo.GetModuleIDs);
+        component.SolvableModuleIDsHandler += new KMBombInfo.GetSolvableModuleIDsHandler(fakeInfo.GetSolvableModuleIDs);
+        component.SolvedModuleIDsHandler += new KMBombInfo.GetSolvedModuleIDsHandler(fakeInfo.GetSolvedModuleIDs);
         component.WidgetQueryResponsesHandler += new KMBombInfo.GetWidgetQueryResponsesHandler(fakeInfo.GetWidgetQueryResponses);
         component.IsBombPresentHandler += new KMBombInfo.KMIsBombPresent(fakeInfo.IsBombPresent);
     }
@@ -1017,14 +1039,12 @@ public class TestHarness : MonoBehaviour
         PrepareBomb(modules, needyModules, ref fakeInfo.widgets);
 
         fakeInfo.TimerModule = _timer;
-        fakeInfo.needyModules = needyModules.ToList();
         UpdateRoot(GetComponent<TestSelectable>());
         for (int i = 0; i < modules.Count; i++)
         {
             KMBombModule mod = modules[i];
             StatusLight statuslight = CreateStatusLight(mod.transform);
 
-            fakeInfo.modules.Add(new KeyValuePair<KMBombModule, bool>(modules[i], false));
             modules[i].OnPass = delegate ()
             {
                 KeyValuePair<KMBombModule, bool> kvp = fakeInfo.modules.First(t => t.Key.Equals(mod));
@@ -1086,13 +1106,10 @@ public class TestHarness : MonoBehaviour
 
         currentSelectable.ActivateChildSelectableAreas();
 
-        Transform audioSouceTransforms = new GameObject().transform;
-        audioSouceTransforms.name = "Audio Sources";
-        audioSouceTransforms.parent = transform;
-
-        audioSource = new GameObject().AddComponent<AudioSource>();
-        audioSource.transform.name = "PlaySoundHandler";
-        audioSource.transform.parent = audioSouceTransforms;
+        AudioSourceTransforms = new GameObject().transform;
+        AudioSourceTransforms.name = "Audio Sources";
+        AudioSourceTransforms.parent = transform;
+        
         KMAudio[] kmAudios = FindObjectsOfType<KMAudio>();
         foreach (KMAudio kmAudio in kmAudios)
         {
@@ -1108,7 +1125,7 @@ public class TestHarness : MonoBehaviour
         {
             AudioSource effectAudioSource = new GameObject().AddComponent<AudioSource>();
             effectAudioSource.transform.name = "SoundEffect." + effect;
-            effectAudioSource.transform.parent = audioSouceTransforms;
+            effectAudioSource.transform.parent = AudioSourceTransforms;
             effectAudioSource.loop = effect == KMSoundOverride.SoundEffect.NeedyWarning ||
                                      effect == KMSoundOverride.SoundEffect.AlarmClockBeep;
 
@@ -1124,16 +1141,30 @@ public class TestHarness : MonoBehaviour
         }
     }
 
+
+    private IEnumerator DestroyAudioSource(AudioSource source, float length)
+    {
+        yield return new WaitForSecondsRealtime(length);
+        try
+        {
+            Destroy(source.gameObject);
+        }
+        catch (MissingReferenceException) {}
+    }
+
     protected void PlaySoundHandler(string clipName, Transform t)
     {
         AudioClip clip = AudioClips == null ? null : AudioClips.FirstOrDefault(a => a.name == clipName);
-
         if (clip != null)
         {
+            var audioSource = new GameObject().AddComponent<AudioSource>();
+            audioSource.transform.parent = AudioSourceTransforms;
+            audioSource.transform.name = clipName;
             audioSource.volume = AudioVolume;
             audioSource.loop = false;
             audioSource.transform.position = t.position;
             audioSource.PlayOneShot(clip);
+            StartCoroutine(DestroyAudioSource(audioSource, clip.length));
         }
         else
             Debug.Log("Audio clip not found: " + clipName);
@@ -1147,12 +1178,25 @@ public class TestHarness : MonoBehaviour
 
         if (clip != null)
         {
+            var audioSource = new GameObject().AddComponent<AudioSource>();
+            audioSource.transform.parent = AudioSourceTransforms;
+            audioSource.transform.name = clipName;
             audioSource.volume = AudioVolume;
             audioSource.transform.position = t.position;
             audioSource.loop = loop;
             audioSource.clip = clip;
             audioSource.Play();
-            audioRef.StopSound = () => { audioSource.Stop(); };
+            audioRef.StopSound = () =>
+            {
+                try
+                {
+                    audioSource.Stop();
+                    Destroy(audioSource.gameObject);
+                }
+                catch (MissingReferenceException) { }
+            };
+            if(!loop)
+                StartCoroutine(DestroyAudioSource(audioSource, clip.length));
         }
         else
             Debug.Log("Audio clip not found: " + clipName);
@@ -1395,19 +1439,31 @@ public class TestHarness : MonoBehaviour
     {
         TestSelectable root = GetComponent<TestSelectable>();
 
-        if (currentSelectableArea != null && currentSelectableArea.Selectable.Interact())
+        if (currentSelectableArea != null)
         {
-            MoveCamera(currentSelectableArea.Selectable);
-            currentSelectable.DeactivateChildSelectableAreas(currentSelectableArea.Selectable);
-            currentSelectable = currentSelectableArea.Selectable;
-            if (root.Children.Contains(currentSelectable))
-                currentModule = currentSelectable;
+            if ((currentSelectableArea.Selectable.GetComponent<KMBombModule>() != null || currentSelectableArea.Selectable.GetComponent<KMNeedyModule>() != null) &&
+                currentSelectableArea.Selectable.ModSelectable.OnFocus != null)
+            {
+                currentSelectableArea.Selectable.ModSelectable.OnFocus();
+            }
+            if (currentSelectableArea.Selectable.Interact())
+            {
+                if (currentSelectable != null && currentSelectable.ModSelectable != null && currentSelectable.ModSelectable.OnDefocus != null)
+                {
+                    currentSelectable.ModSelectable.OnDefocus();
+                }
+                MoveCamera(currentSelectableArea.Selectable);
+                currentSelectable.DeactivateChildSelectableAreas(currentSelectableArea.Selectable);
+                currentSelectable = currentSelectableArea.Selectable;
+                if (root.Children.Contains(currentSelectable))
+                    currentModule = currentSelectable;
 
-            GetComponent<TestSelectable>().ActivateChildSelectableAreas();
-            if (currentModule != null) currentModule.SelectableArea.DeactivateSelectableArea();
+                GetComponent<TestSelectable>().ActivateChildSelectableAreas();
+                if (currentModule != null) currentModule.SelectableArea.DeactivateSelectableArea();
 
-            currentSelectable.ActivateChildSelectableAreas();
-            lastSelected = currentSelectable.GetCurrentChild();
+                currentSelectable.ActivateChildSelectableAreas();
+                lastSelected = currentSelectable.GetCurrentChild();
+            }
         }
     }
 
@@ -1423,6 +1479,10 @@ public class TestHarness : MonoBehaviour
     {
         if (currentSelectable.Parent != null && currentSelectable.Cancel())
         {
+            if (currentSelectable != null && currentSelectable.ModSelectable != null && currentSelectable.ModSelectable.OnDefocus != null)
+            {
+                currentSelectable.ModSelectable.OnDefocus();
+            }
             MoveCamera(currentSelectable.Parent);
             currentSelectable.DeactivateChildSelectableAreas(currentSelectable.Parent);
             currentSelectable = currentSelectable.Parent;
@@ -1464,6 +1524,7 @@ public class TestHarness : MonoBehaviour
                 {
                     AddHighlightables();
                     AddSelectables();
+                    testSelectable.UpdateChildrenPositions();
 
                     if (currentSelectable == testSelectable)
                     {
@@ -1527,7 +1588,7 @@ public class TestHarness : MonoBehaviour
         {
             foreach (NeedyTimer needyModule in fakeInfo.needyModuleTimers)
             {
-                needyModule.StopTimer(NeedyTimer.NeedyState.InitialSetup);
+                needyModule.StopTimer(NeedyTimer.NeedyState.Terminated);
             }
         }
 

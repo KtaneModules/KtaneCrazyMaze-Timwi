@@ -109,6 +109,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4915001335706256}
   - component: {fileID: 212899501374407988}
+  - component: {fileID: 114844172409637266}
   m_Layer: 0
   m_Name: Shape
   m_TagString: Untagged
@@ -197,6 +198,7 @@ GameObject:
   - component: {fileID: 212031687789456020}
   - component: {fileID: 114724162010345738}
   - component: {fileID: 65335646199661686}
+  - component: {fileID: 114774949351136590}
   m_Layer: 0
   m_Name: Bridge
   m_TagString: Untagged
@@ -214,6 +216,7 @@ GameObject:
   - component: {fileID: 4304966629425844}
   - component: {fileID: 23837347453180392}
   - component: {fileID: 102560973944643718}
+  - component: {fileID: 114718172336691576}
   m_Layer: 0
   m_Name: Goal
   m_TagString: Untagged
@@ -251,6 +254,7 @@ GameObject:
   - component: {fileID: 33154591844030234}
   - component: {fileID: 23062011798715150}
   - component: {fileID: 95989246137018468}
+  - component: {fileID: 114213543514157288}
   m_Layer: 0
   m_Name: ModuleBackground
   m_TagString: Untagged
@@ -284,6 +288,7 @@ GameObject:
   - component: {fileID: 4384992838347524}
   - component: {fileID: 23342580049147046}
   - component: {fileID: 102780923661109610}
+  - component: {fileID: 114343739985866560}
   m_Layer: 0
   m_Name: Current
   m_TagString: Untagged
@@ -1077,6 +1082,19 @@ MonoBehaviour:
   AllowSelectionWrapY: 0
   ForceSelectionHighlight: 0
   ForceInteractionHighlight: 0
+--- !u!114 &114213543514157288
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1746352290629896}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1005838349, guid: 45b809be76fd7a3468b6f517bced6f28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShaderNames:
+  - Unlit/Texture
 --- !u!114 &114302444567128132
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1089,6 +1107,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _seed: 1
+--- !u!114 &114343739985866560
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1781587774299466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1005838349, guid: 45b809be76fd7a3468b6f517bced6f28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShaderNames:
+  - GUI/KT 3D Text
 --- !u!114 &114356233107438710
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1871,6 +1902,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   HighlightScale: {x: 1, y: 1, z: 1}
   OutlineAmount: 0
+--- !u!114 &114718172336691576
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1659618764581782}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1005838349, guid: 45b809be76fd7a3468b6f517bced6f28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShaderNames:
+  - GUI/KT 3D Text
 --- !u!114 &114724162010345738
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1930,6 +1974,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   HighlightScale: {x: 1, y: 1, z: 1}
   OutlineAmount: 0
+--- !u!114 &114774949351136590
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1576140742817296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1005838349, guid: 45b809be76fd7a3468b6f517bced6f28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShaderNames:
+  - Sprites/Default
 --- !u!114 &114808066146295558
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1997,6 +2054,19 @@ MonoBehaviour:
   AllowSelectionWrapY: 0
   ForceSelectionHighlight: 0
   ForceInteractionHighlight: 0
+--- !u!114 &114844172409637266
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1399162015051222}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1005838349, guid: 45b809be76fd7a3468b6f517bced6f28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShaderNames:
+  - Sprites/Default
 --- !u!114 &114898622749321040
 MonoBehaviour:
   m_ObjectHideFlags: 1
