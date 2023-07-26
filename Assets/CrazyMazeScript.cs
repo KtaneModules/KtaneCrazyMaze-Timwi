@@ -141,13 +141,13 @@ public class CrazyMazeScript : MonoBehaviour
             }
         }
 
-        var letters = Enumerable.Range(0, 26).Select(c => (char)('A' + c));
+        var letters = Enumerable.Range(0, 26).Select(c => (char) ('A' + c));
         _cellLetters = rnd.ShuffleFisherYates(letters.SelectMany(ltr => letters.Select(ltr2 => ltr + "" + ltr2)).ToArray());
         // End rule seed
 
         // Decide on a start cell
         _startingCell = Rnd.Range(0, 26 * 26);
-        //_startingCell = _cellLetters.IndexOf(c => c == "PM");
+        //_startingCell = _cellLetters.IndexOf(c => c == "SM");
         SetCell(_startingCell);
 
         // Decide on a goal cell that is a certain distance away
@@ -230,12 +230,12 @@ public class CrazyMazeScript : MonoBehaviour
             float z = Mathf.Sin((timer + offset) / duration * 2 * Mathf.PI) * intensity;
             trf.localPosition = new Vector3(x + adjustX, trf.localPosition.y, z + adjustZ);
             CurCellText.text = _moduleSolved ? "GG" : _showingGoal ? "??" : _cellLetters[_currentCell];
-            GoalCellText.text = _moduleSolved ? "" :_showingGoal ? _cellLetters[_goalCell] : "??";
+            GoalCellText.text = _moduleSolved ? "" : _showingGoal ? _cellLetters[_goalCell] : "??";
         }
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"!{0} cycle [shows all arrows] | !{0} move 231 [moves the second arrow in the cycle, then the third, etc.; arrows are numbered clockwise from 12 o’clock] | !{0} bridge | !{0} reset [return to starting location]";
+    private readonly string TwitchHelpMessage = @"!{0} cycle [shows all arrows] | !{0} move 231 [moves the second arrow in the cycle, then the third, etc.; arrows are numbered clockwise from 12 o’clock, but note this means the order in the circular submaze is unintuitive] | !{0} bridge | !{0} reset [return to starting location]";
 #pragma warning restore 414
 
     private IEnumerator ProcessTwitchCommand(string command)
