@@ -15,19 +15,19 @@ public class CrazyMazeScript : MonoBehaviour
     public KMAudio Audio;
     public KMSelectable[] Arrows;
     public KMSelectable Bridge;
-    public TextMesh CurCellText;
-    public TextMesh GoalCellText;
+    public TextMesh CurCellText, GoalCellText;
     public SpriteRenderer CurrentCell;
     public Sprite[] Sprites;
+    public MeshRenderer PuzzleBG;
+    public Material PuzzleOffMat;
     public KMRuleSeedable RuleSeedable;
 
     private static int _moduleIdCounter = 1;
     private int _moduleID = 0;
     private bool _moduleSolved = false;
 
-    private int _startingCell;
-    private int _currentCell;
-    private int _goalCell;
+    private Coroutine _textAnimCoroutine;
+    private int _currentCell, _goalCell, _startingCell;
     private bool _showingGoal;
 
     private HashSet<int>[] _passable;
@@ -37,12 +37,12 @@ public class CrazyMazeScript : MonoBehaviour
     {
         _moduleID = _moduleIdCounter++;
         for (int i = 0; i < Arrows.Length; i++)
-            Arrows[i].OnInteract += ArrowPress(i, Arrows[i], "move");
-        Bridge.OnInteract += ArrowPress(-1, Bridge, "bridge");
+            Arrows[i].OnInteract += ArrowPress(i, Arrows[i]);
+        Bridge.OnInteract += ArrowPress(-1, Bridge);
         _passable = Enumerable.Range(0, 26 * 26).Select(ix => new HashSet<int>()).ToArray();
     }
 
-    private KMSelectable.OnInteractHandler ArrowPress(int pos, KMSelectable sel, string sound)
+    private KMSelectable.OnInteractHandler ArrowPress(int pos, KMSelectable sel)
     {
         var isBridge = pos == -1;
         var upper = isBridge ? "Traversing bridge" : "Going";
@@ -50,7 +50,8 @@ public class CrazyMazeScript : MonoBehaviour
 
         return delegate
         {
-            Audio.PlaySoundAtTransform(sound, sel.transform);
+            StartCoroutine(MoveAnim());
+            Audio.PlaySoundAtTransform("press", sel.transform);
             sel.AddInteractionPunch(.3f);
             if (_moduleSolved)
                 return false;
@@ -63,13 +64,28 @@ public class CrazyMazeScript : MonoBehaviour
             {
                 Debug.LogFormat(@"[Crazy Maze #{0}] {3} from {1} to {2}.", _moduleID, _cellLetters[_currentCell], _cellLetters[goingTo.Value], upper);
                 if (isBridge)
+                {
                     _showingGoal = !_showingGoal;
+                    Audio.PlaySoundAtTransform("bridge", sel.transform);
+                    CurCellText.transform.localPosition = new Vector3(CurCellText.transform.localPosition.x, _showingGoal ? 0.025f : 0.03f, CurCellText.transform.localPosition.z);
+                    GoalCellText.transform.localPosition = new Vector3(CurCellText.transform.localPosition.x, _showingGoal ? 0.03f : 0.025f, CurCellText.transform.localPosition.z);
+                }
                 SetCell(goingTo.Value);
                 if (goingTo.Value == _goalCell)
                 {
                     Debug.LogFormat(@"[Crazy Maze #{0}] Module solved.", _moduleID);
                     Module.HandlePass();
                     _moduleSolved = true;
+                    foreach (KMSelectable arrow in Arrows)
+                        arrow.gameObject.SetActive(false);
+                    Bridge.gameObject.SetActive(false);
+                    StartCoroutine(SolveAnim());
+                    Audio.PlaySoundAtTransform("solve", CurrentCell.transform);
+                    if (_textAnimCoroutine != null)
+                        StopCoroutine(_textAnimCoroutine);
+                    CurCellText.transform.localPosition = new Vector3(0, 0.0151f, 0.0044f);
+                    CurCellText.color = new Color(1, 1, 1, 100f / 255);
+                    GoalCellText.color = Color.clear;
                 }
             }
             else if (goingTo != null)
@@ -125,7 +141,7 @@ public class CrazyMazeScript : MonoBehaviour
             }
         }
 
-        var letters = Enumerable.Range(0, 26).Select(c => (char) ('A' + c));
+        var letters = Enumerable.Range(0, 26).Select(c => (char)('A' + c));
         _cellLetters = rnd.ShuffleFisherYates(letters.SelectMany(ltr => letters.Select(ltr2 => ltr + "" + ltr2)).ToArray());
         // End rule seed
 
@@ -153,8 +169,8 @@ public class CrazyMazeScript : MonoBehaviour
         Debug.LogFormat(@"[Crazy Maze #{0}] Start cell: {1}", _moduleID, _cellLetters[_currentCell]);
         Debug.LogFormat(@"[Crazy Maze #{0}] Goal cell: {1}", _moduleID, _cellLetters[_goalCell]);
 
-        StartCoroutine(CellTextAnimation(CurCellText.transform, 0, adjustX: -.02f, adjustZ: .02f));
-        StartCoroutine(CellTextAnimation(GoalCellText.transform, 1, adjustX: .02f, adjustZ: -.02f));
+        _textAnimCoroutine = StartCoroutine(TextAnim(CurCellText.transform, 0, adjustX: -.02f, adjustZ: .02f));
+        StartCoroutine(TextAnim(GoalCellText.transform, 1, adjustX: .02f, adjustZ: -.02f));
     }
 
     void SetCell(int cell)
@@ -177,7 +193,34 @@ public class CrazyMazeScript : MonoBehaviour
         CurrentCell.sprite = Sprites[cell];
     }
 
-    private IEnumerator CellTextAnimation(Transform trf, float offset, float duration = 2f, float intensity = 0.018f, float adjustX = 0.02f, float adjustZ = 0.02f)
+    private IEnumerator SolveAnim(float fadeDuration = 2f)
+    {
+        PuzzleBG.material = PuzzleOffMat;
+        PuzzleBG.material.color = Color.white;
+        yield return null;
+        PuzzleBG.material.color = Color.black;
+        CurrentCell.color = Color.white;
+        CurrentCell.transform.localScale = Vector3.one * 0.04f;
+        float timer = 0;
+        while (timer < fadeDuration)
+        {
+            yield return null;
+            timer += Time.deltaTime;
+            CurrentCell.color = Color.Lerp(Color.white, new Color(1, 1, 1, 0), timer / fadeDuration);
+            CurrentCell.transform.localScale = Vector3.one * 0.04f * Easing.OutExpo(timer, 1, 0, fadeDuration);
+        }
+        CurrentCell.color = Color.clear;
+        CurrentCell.transform.localScale = Vector3.zero;
+    }
+
+    private IEnumerator MoveAnim()
+    {
+        CurrentCell.color = Color.white;
+        yield return null;
+        CurrentCell.color = new Color(1, 1, 1, 0.5f);
+    }
+
+    private IEnumerator TextAnim(Transform trf, float offset, float duration = 2f, float intensity = 0.018f, float adjustX = 0.02f, float adjustZ = 0.02f)
     {
         while (true)
         {
@@ -186,8 +229,8 @@ public class CrazyMazeScript : MonoBehaviour
             float x = Mathf.Cos((timer + offset) / duration * 2 * Mathf.PI) * intensity;
             float z = Mathf.Sin((timer + offset) / duration * 2 * Mathf.PI) * intensity;
             trf.localPosition = new Vector3(x + adjustX, trf.localPosition.y, z + adjustZ);
-            CurCellText.text = _moduleSolved ? "G" : _showingGoal ? "??" : _cellLetters[_currentCell];
-            GoalCellText.text = _moduleSolved ? "G" : _showingGoal ? _cellLetters[_goalCell] : "??";
+            CurCellText.text = _moduleSolved ? "GG" : _showingGoal ? "??" : _cellLetters[_currentCell];
+            GoalCellText.text = _moduleSolved ? "" :_showingGoal ? _cellLetters[_goalCell] : "??";
         }
     }
 
