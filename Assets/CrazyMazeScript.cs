@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -52,7 +51,7 @@ public class CrazyMazeScript : MonoBehaviour
         {
             StartCoroutine(MoveAnim());
             Audio.PlaySoundAtTransform("press", sel.transform);
-            sel.AddInteractionPunch(.3f);
+            sel.AddInteractionPunch(.7f);
             if (_moduleSolved)
                 return false;
 
@@ -85,7 +84,9 @@ public class CrazyMazeScript : MonoBehaviour
                         StopCoroutine(_textAnimCoroutine);
                     CurCellText.transform.localPosition = new Vector3(0, 0.0151f, 0.0044f);
                     CurCellText.color = new Color(1, 1, 1, 100f / 255);
-                    GoalCellText.color = Color.clear;
+                    CurCellText.characterSize = .00125f;
+                    CurCellText.text = "NICE";
+                    GoalCellText.gameObject.SetActive(false);
                 }
             }
             else if (goingTo != null)
@@ -147,7 +148,7 @@ public class CrazyMazeScript : MonoBehaviour
 
         // Decide on a start cell
         _startingCell = Rnd.Range(0, 26 * 26);
-        //_startingCell = _cellLetters.IndexOf(c => c == "SM");
+        //_startingCell = _cellLetters.IndexOf(c => c == "LI");
         SetCell(_startingCell);
 
         // Decide on a goal cell that is a certain distance away
@@ -175,8 +176,8 @@ public class CrazyMazeScript : MonoBehaviour
 
     void SetCell(int cell)
     {
-        var cellTransitions = CellTransitions.All[cell];
-        var transitions = cellTransitions.Neighbors;
+        var cellInfo = CellTransitions.All[cell];
+        var transitions = cellInfo.Neighbors;
 
         for (int arIx = 0; arIx < Arrows.Length; arIx++)
         {
@@ -190,7 +191,7 @@ public class CrazyMazeScript : MonoBehaviour
             }
         }
         _currentCell = cell;
-        CurrentCell.sprite = Sprites[cell];
+        CurrentCell.sprite = Sprites[cellInfo.SpriteIx];
     }
 
     private IEnumerator SolveAnim(float fadeDuration = 2f)
@@ -222,15 +223,15 @@ public class CrazyMazeScript : MonoBehaviour
 
     private IEnumerator TextAnim(Transform trf, float offset, float duration = 2f, float intensity = 0.018f, float adjustX = 0.02f, float adjustZ = 0.02f)
     {
-        while (true)
+        while (!_moduleSolved)
         {
-            yield return null;
             var timer = Time.time;
             float x = Mathf.Cos((timer + offset) / duration * 2 * Mathf.PI) * intensity;
             float z = Mathf.Sin((timer + offset) / duration * 2 * Mathf.PI) * intensity;
             trf.localPosition = new Vector3(x + adjustX, trf.localPosition.y, z + adjustZ);
-            CurCellText.text = _moduleSolved ? "GG" : _showingGoal ? "??" : _cellLetters[_currentCell];
-            GoalCellText.text = _moduleSolved ? "" : _showingGoal ? _cellLetters[_goalCell] : "??";
+            CurCellText.text = _showingGoal ? "??" : _cellLetters[_currentCell];
+            GoalCellText.text = _showingGoal ? _cellLetters[_goalCell] : "??";
+            yield return null;
         }
     }
 
