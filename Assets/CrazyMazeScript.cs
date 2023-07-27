@@ -174,15 +174,13 @@ public class CrazyMazeScript : MonoBehaviour
 
         _textAnimCoroutine = StartCoroutine(TextAnim(CurCellText.transform, 0, adjustX: -.02f, adjustZ: .02f));
         StartCoroutine(TextAnim(GoalCellText.transform, 1, adjustX: .02f, adjustZ: -.02f));
-        StartCoroutine(CheckForTp());
+        Module.OnActivate += Activate;
     }
 
-    private IEnumerator CheckForTp()
+    private void Activate()
     {
-        yield return null;
-        if (!TwitchPlaysActive)
-            foreach (var arTx in ArrowTexts)
-                arTx.gameObject.SetActive(false);
+        foreach (var arTx in ArrowTexts)
+            arTx.gameObject.SetActive(TwitchPlaysActive);
     }
 
     void SetCell(int cell)
