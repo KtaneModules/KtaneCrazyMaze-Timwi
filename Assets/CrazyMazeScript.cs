@@ -112,7 +112,8 @@ public class CrazyMazeScript : MonoBehaviour
         var cells = Enumerable.Range(0, 676).ToList();
         var links = Enumerable.Range(0, 676)
             .Select(cellIx => CellTransitions.All[cellIx])
-            .Select(tr => tr.BridgeDestination == null ? tr.Neighbors.Select(n => n.ToCell) : tr.Neighbors.Select(n => n.ToCell).Concat(new[] { tr.BridgeDestination.Value }))
+            .Select(tr => new { tr.BridgeDestination, Neighbors = tr.Neighbors.Where(n => n.ToCell != null).Select(n => n.ToCell.Value) })
+            .Select(tr => tr.BridgeDestination == null ? tr.Neighbors : tr.Neighbors.Concat(new[] { tr.BridgeDestination.Value }))
             .Select(cs => cs.OrderBy(c => c).ToArray())
             .ToArray();
 
@@ -148,7 +149,7 @@ public class CrazyMazeScript : MonoBehaviour
 
         // Decide on a start cell
         _startingCell = Rnd.Range(0, 26 * 26);
-        //_startingCell = _cellLetters.IndexOf(c => c == "LI");
+        //_startingCell = _cellLetters.IndexOf(c => c == "XS");
         SetCell(_startingCell);
 
         // Decide on a goal cell that is a certain distance away
@@ -236,7 +237,7 @@ public class CrazyMazeScript : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"!{0} cycle [shows all arrows] | !{0} move 231 [moves the second arrow in the cycle, then the third, etc.; arrows are numbered clockwise from 12 o’clock, but note this means the order in the circular submaze is unintuitive] | !{0} bridge | !{0} reset [return to starting location]";
+    private readonly string TwitchHelpMessage = @"!{0} cycle [shows all arrows] | !{0} move 231 [moves the second arrow in the cycle, then the third, etc.; arrows are numbered clockwise from ≈north; if unsure, use cycle] | !{0} bridge | !{0} reset [return to starting location]";
 #pragma warning restore 414
 
     private IEnumerator ProcessTwitchCommand(string command)
@@ -315,13 +316,14 @@ public class CrazyMazeScript : MonoBehaviour
 
             var neighbors = CellTransitions.All[cell].Neighbors;
             for (var dir = 0; dir < neighbors.Length; dir++)
-            {
-                var newCell = neighbors[dir].ToCell;
-                if (!_passable[cell].Contains(newCell) || parents.ContainsKey(newCell))
-                    continue;
-                parents[newCell] = cell;
-                q.Enqueue(newCell);
-            }
+                if (neighbors[dir].ToCell != null)
+                {
+                    var newCell = neighbors[dir].ToCell.Value;
+                    if (!_passable[cell].Contains(newCell) || parents.ContainsKey(newCell))
+                        continue;
+                    parents[newCell] = cell;
+                    q.Enqueue(newCell);
+                }
             if (CellTransitions.All[cell].BridgeDestination != null)
             {
                 var newCell = CellTransitions.All[cell].BridgeDestination.Value;
