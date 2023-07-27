@@ -13,6 +13,7 @@ public class CrazyMazeScript : MonoBehaviour
     public KMBombInfo Bomb;
     public KMAudio Audio;
     public KMSelectable[] Arrows;
+    public TextMesh[] ArrowTexts;   // for TP only
     public KMSelectable Bridge;
     public TextMesh CurCellText, GoalCellText;
     public SpriteRenderer CurrentCell;
@@ -173,6 +174,15 @@ public class CrazyMazeScript : MonoBehaviour
 
         _textAnimCoroutine = StartCoroutine(TextAnim(CurCellText.transform, 0, adjustX: -.02f, adjustZ: .02f));
         StartCoroutine(TextAnim(GoalCellText.transform, 1, adjustX: .02f, adjustZ: -.02f));
+        StartCoroutine(CheckForTp());
+    }
+
+    private IEnumerator CheckForTp()
+    {
+        yield return null;
+        if (!TwitchPlaysActive)
+            foreach (var arTx in ArrowTexts)
+                arTx.gameObject.SetActive(false);
     }
 
     void SetCell(int cell)
@@ -199,7 +209,7 @@ public class CrazyMazeScript : MonoBehaviour
     {
         PuzzleBG.material = PuzzleOffMat;
         PuzzleBG.material.color = Color.white;
-        yield return null;
+        yield return new WaitForSeconds(1f / 30);
         PuzzleBG.material.color = Color.black;
         CurrentCell.color = Color.white;
         CurrentCell.transform.localScale = Vector3.one * 0.04f;
@@ -211,14 +221,13 @@ public class CrazyMazeScript : MonoBehaviour
             CurrentCell.color = Color.Lerp(Color.white, new Color(1, 1, 1, 0), timer / fadeDuration);
             CurrentCell.transform.localScale = Vector3.one * 0.04f * Easing.OutExpo(timer, 1, 0, fadeDuration);
         }
-        CurrentCell.color = Color.clear;
-        CurrentCell.transform.localScale = Vector3.zero;
+        CurrentCell.gameObject.SetActive(false);
     }
 
     private IEnumerator MoveAnim()
     {
         CurrentCell.color = Color.white;
-        yield return null;
+        yield return new WaitForSeconds(1f / 30);
         CurrentCell.color = new Color(1, 1, 1, 0.5f);
     }
 
@@ -237,32 +246,17 @@ public class CrazyMazeScript : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"!{0} cycle [shows all arrows] | !{0} move 231 [moves the second arrow in the cycle, then the third, etc.; arrows are numbered clockwise from ≈north; if unsure, use cycle] | !{0} bridge | !{0} reset [return to starting location]";
+#pragma warning disable 649
+    private readonly string TwitchHelpMessage = @"!{0} move 231 [The first number in each command identifies a numbered arrow. All subsequent numbers within the same command select an edge counting clockwise from the edge that was traversed last. For example, 1 is an immediate left-turn. In a five-sided cell, 4 is an immediate right-turn.] | !{0} bridge | !{0} reset [return to starting location]";
+    private bool TwitchPlaysActive;
+#pragma warning restore 649
 #pragma warning restore 414
 
     private IEnumerator ProcessTwitchCommand(string command)
     {
         Match m;
 
-        if (Regex.IsMatch(command, @"^\s*cycle\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-        {
-            yield return null;
-            for (int i = 0; i < Arrows.Length; i++)
-            {
-                var obj = Arrows[i].gameObject;
-                if (!obj.activeSelf)
-                    break;
-                yield return new WaitForSeconds(.25f);
-                var hClone = obj.transform.Find("Highlight(Clone)");
-                if (hClone != null)
-                    obj = hClone.gameObject ?? obj;
-                obj.SetActive(true);
-                yield return new WaitForSeconds(.7f);
-                obj.SetActive(false);
-                yield return new WaitForSeconds(.1f);
-            }
-        }
-        else if (Regex.IsMatch(command, @"^\s*reset\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        if (Regex.IsMatch(command, @"^\s*reset\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
         {
             yield return null;
             SetCell(_startingCell);
@@ -282,19 +276,25 @@ public class CrazyMazeScript : MonoBehaviour
                 yield break;
             }
             yield return null;
+            var prevVal = 0;
             for (var i = 0; i < vals.Length; i++)
             {
                 var val = vals[i] - '1';
-                if (!Arrows[val].gameObject.activeSelf)
+                var numArrows = Arrows.Count(a => a.gameObject.activeSelf);
+                if (val >= numArrows)
                 {
                     yield return i == 0
                         ? "sendtochaterror @{0}, that first number is not a valid arrow."
                         : i == 1
-                            ? "sendtochaterror @{0}, I executed the first move but the second one is not a valid arrow."
-                            : string.Format("sendtochaterror @{{0}}, I executed the first {0} of your moves but the next one is not a valid arrow.", i);
+                            ? "sendtochaterror @{0}, I executed the first move but the second one is greater than the number of arrows."
+                            : string.Format("sendtochaterror @{{0}}, I executed the first {0} of your moves but the next one is greater than the number of arrows.", i);
                     yield break;
                 }
+                if (i > 0)
+                    val = (val + prevVal + 1) % numArrows;
+                var prevCell = _currentCell;
                 yield return new[] { Arrows[val] };
+                prevVal = CellTransitions.All[_currentCell].Neighbors.IndexOf(n => n.ToCell == prevCell);
             }
         }
     }
