@@ -2482,8 +2482,8 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 7186343dd2227a8468ff8aed2a07b915, type: 3}
+  m_SortingOrder: -1
+  m_Sprite: {fileID: 21300000, guid: 3bf68785834210f4695e820647932763, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 0.503}
   m_FlipX: 0
   m_FlipY: 0
@@ -2491,5 +2491,5 @@ SpriteRenderer:
   m_Size: {x: 5, y: 5}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
