@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -245,54 +246,75 @@ public class CrazyMazeScript : MonoBehaviour
 
 #pragma warning disable 414
 #pragma warning disable 649
-    private readonly string TwitchHelpMessage = @"!{0} move 231 [The first number in each command identifies a numbered arrow. All subsequent numbers within the same command select an edge counting clockwise from the edge that was traversed last. For example, 1 is an immediate left-turn. In a five-sided cell, 4 is an immediate right-turn.] | !{0} bridge | !{0} reset [return to starting location]";
+    private readonly string TwitchHelpMessage = @"!{0} move 123 [bridge] (The first number in each command identifies a numbered arrow. All subsequent numbers within the same command select an edge counting clockwise from the edge that was traversed last. For example: Traversing to a 5 sided shape, u-turning and counting the traversed side as 0, 4 will traverse you to your immediate left. | !{0} bridge | !{0} reset (return to starting location)";
     private bool TwitchPlaysActive;
 #pragma warning restore 649
 #pragma warning restore 414
 
     private IEnumerator ProcessTwitchCommand(string command)
     {
-        Match m;
+        string[] parameters = command.Split(' ');
 
-        if (Regex.IsMatch(command, @"^\s*reset\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        for (int i = 0; i < parameters.Length; i++)
         {
             yield return null;
-            SetCell(_startingCell);
-            _showingGoal = false;
-        }
-        else if (Regex.IsMatch(command, @"^\s*bridge\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-        {
-            yield return null;
-            yield return new[] { Bridge };
-        }
-        else if ((m = Regex.Match(command, @"^\s*move\s+([1-8 ,;]+)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)).Success)
-        {
-            var vals = m.Groups[1].Value.Where(ch => ch >= '1' && ch <= '8').ToArray();
-            if (vals.Length == 0)
+            Match match = Regex.Match(parameters[i], @"^(bridge|reset|move)$", RegexOptions.IgnoreCase);
+
+            if (!match.Success)
             {
-                yield return "sendtochaterror @{0}, those are not valid numbers.";
+                yield return $"sendtochaterror @{0}, unrecognized command: " + parameters[i];
                 yield break;
             }
-            yield return null;
-            var prevVal = 0;
-            for (var i = 0; i < vals.Length; i++)
+
+            switch (match.Groups[1].Value.ToLower())
             {
-                var val = vals[i] - '1';
-                var numArrows = Arrows.Count(a => a.gameObject.activeSelf);
-                if (val >= numArrows)
-                {
-                    yield return i == 0
-                        ? "sendtochaterror @{0}, that first number is not a valid arrow."
-                        : i == 1
-                            ? "sendtochaterror @{0}, I executed the first move but the second one is greater than the number of arrows."
-                            : string.Format("sendtochaterror @{{0}}, I executed the first {0} of your moves but the next one is greater than the number of arrows.", i);
-                    yield break;
-                }
-                if (i > 0)
-                    val = (val + prevVal + 1) % numArrows;
-                var prevCell = _currentCell;
-                yield return new[] { Arrows[val] };
-                prevVal = CellTransitions.All[_currentCell].Neighbors.IndexOf(n => n.ToCell == prevCell);
+                case "reset":
+                    SetCell(_startingCell);
+                    _showingGoal = false;
+                    break;
+
+                case "bridge":
+                    yield return new[] { Bridge };
+                    break;
+
+                case "move":
+                    if (i + 1 >= parameters.Length)
+                    {
+                        yield return "sendtochaterror @{0}, no numbers provided after 'move'.";
+                        yield break;
+                    }
+
+                    var vals = parameters[i + 1].Where(ch => ch >= '1' && ch <= '8').ToArray();
+
+                    if (vals.Length == 0)
+                    {
+                        yield return "sendtochaterror @{0}, those are not valid numbers.";
+                        yield break;
+                    }
+
+                    var prevVal = 0;
+                    for (var j = 0; j < vals.Length; j++)
+                    {
+                        yield return null;
+                        var val = vals[j] - '1';
+                        var numArrows = Arrows.Count(a => a.gameObject.activeSelf);
+                        if (val >= numArrows)
+                        {
+                            yield return j == 0
+                                ? "sendtochaterror @{0}, that first number is not a valid arrow."
+                                : j == 1
+                                    ? "sendtochaterror @{0}, I executed the first move but the second one is greater than the number of arrows."
+                                    : string.Format("sendtochaterror @{{0}}, I executed the first {0} of your moves but the next one is greater than the number of arrows.", j);
+                            yield break;
+                        }
+                        if (j > 0)
+                            val = (val + prevVal + 1) % numArrows;
+                        var prevCell = _currentCell;
+                        yield return new[] { Arrows[val] };
+                        prevVal = CellTransitions.All[_currentCell].Neighbors.IndexOf(n => n.ToCell == prevCell);
+                    }
+                    i++;
+                    break;
             }
         }
     }
